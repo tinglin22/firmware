@@ -15,20 +15,38 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3
 
-      - name: Get current date-time
-        id: datetime
-        run: echo "now=$(date +'%Y%m%d%H%M')" >> $GITHUB_OUTPUT
+      - name: Get current version from version.json
+        id: get_version
+        run: |
+          VERSION_FILE="version.json"
+          if [ -f "$VERSION_FILE" ]; then
+            VERSION=$(jq -r '.version' "$VERSION_FILE")
+          else
+            VERSION="1.0.0" # Default version if version.json doesn't exist
+          fi
+          echo "Current version: $VERSION"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Increment version number
+        id: increment_version
+        run: |
+          VERSION=${{ env.VERSION }}
+          VERSION_ARRAY=(${VERSION//./ })
+          PATCH_VERSION=${VERSION_ARRAY[2]}
+          NEW_PATCH_VERSION=$((PATCH_VERSION + 1))
+          NEW_VERSION="${VERSION_ARRAY[0]}.${VERSION_ARRAY[1]}.$NEW_PATCH_VERSION"
+          echo "New version: $NEW_VERSION"
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
 
       - name: Update version.json
         run: |
-          VERSION="1.0.${{ steps.datetime.outputs.now }}"
           URL="https://raw.githubusercontent.com/${{ github.repository }}/main/firmware.ino.bin"
-          echo "{\"version\": \"$VERSION\", \"url\": \"$URL\"}" > version.json
+          echo "{\"version\": \"${{ env.NEW_VERSION }}\", \"url\": \"$URL\"}" > version.json
 
       - name: Commit and push
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add version.json
-          git commit -m "Update version.json to $VERSION" || echo "Nothing to commit"
+          git commit -m "Update version.json to ${{ env.NEW_VERSION }}" || echo "Nothing to commit"
           git push
