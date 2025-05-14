@@ -1,0 +1,31 @@
+name: Update version.json
+
+on:
+  push:
+    paths:
+      - 'firmware.bin'
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Get current date-time
+        id: datetime
+        run: echo "now=$(date +'%Y%m%d%H%M')" >> $GITHUB_OUTPUT
+
+      - name: Update version.json
+        run: |
+          VERSION="1.0.${{ steps.datetime.outputs.now }}"
+          URL="https://raw.githubusercontent.com/${{ github.repository }}/main/firmware.bin"
+          echo "{\"version\": \"$VERSION\", \"url\": \"$URL\"}" > version.json
+
+      - name: Commit and push
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add version.json
+          git commit -m "Update version.json to $VERSION"
+          git push
