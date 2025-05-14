@@ -2,8 +2,8 @@ name: Update version.json
 
 on:
   push:
-    paths:
-      - 'firmware.ino.bin'
+    branches:
+      - main
 
 permissions:
   contents: write
